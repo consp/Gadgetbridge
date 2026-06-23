@@ -1057,6 +1057,8 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 navigationInfoSpec.instruction = intentCopy.getStringExtra(EXTRA_NAVIGATION_INSTRUCTION);
                 navigationInfoSpec.nextAction = intentCopy.getIntExtra(EXTRA_NAVIGATION_NEXT_ACTION,0);
                 navigationInfoSpec.distanceToTurn = intentCopy.getStringExtra(EXTRA_NAVIGATION_DISTANCE_TO_TURN);
+                navigationInfoSpec.timeLeft = intentCopy.getStringExtra(EXTRA_NAVIGATION_TIME_LEFT);
+                navigationInfoSpec.icon = intentCopy.getByteArrayExtra(EXTRA_NAVIGATION_ICON);
                 navigationInfoSpec.ETA = intentCopy.getStringExtra(EXTRA_NAVIGATION_ETA);
                 deviceSupport.onSetNavigationInfo(navigationInfoSpec);
                 break;

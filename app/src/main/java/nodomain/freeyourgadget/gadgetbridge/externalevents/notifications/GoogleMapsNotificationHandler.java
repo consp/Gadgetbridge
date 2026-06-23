@@ -20,6 +20,9 @@ import android.app.Notification;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.os.PowerManager;
@@ -31,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
@@ -1182,25 +1186,65 @@ public class GoogleMapsNotificationHandler {
     }
 
     public boolean handle(Context context, StatusBarNotification sbn) {
+        LOG.debug("handler called for gmaps");
         if (sbn.getPackageName().equals("com.google.android.apps.maps")) {
             checkShouldSendNavigation(context);
-            if (!shouldSendNavigation) return false;
+            if (!shouldSendNavigation) {
+                LOG.debug("Early exit, we do not send navinfo");
+                return false;
+            }
             Notification notification = sbn.getNotification();
-            if (!NotificationCompat.getLocalOnly(notification))
-                return false; // ignore non-local notifications
-            
-            String distance = (notification.extras.get("android.title")==null) ? "" :
-                    notification.extras.get("android.title").toString(); // eg 100 yd
-            String instruction = (notification.extras.get("android.text")==null) ? "" :
-                    notification.extras.get("android.text").toString(); // eg: High St towards Blah
-            String navLine = (notification.extras.get("android.subText")==null) ? "" :
-                    notification.extras.get("android.subText").toString().replaceAll("\u00A0", " ");  // eg: 13 min · 4.6 mi · 11:55 ETA
-            String[] navLines = navLine.split("·");
-            for (int i = 0; i < navLines.length; i++) navLines[i] = navLines[i].trim();
-            if (navLines.length < 3) return false; // not in the format we expected - might be 'Shared with you' notification
-            // navLines now has at least 3 elements
-            LOG.info("Navigation: " + instruction + "," + distance + "," + navLines[0] + "," + navLines[1] + "," + navLines[2]);
+            if (!NotificationCompat.getLocalOnly(notification)) {
+                LOG.debug("GMAPS IGNORED");
+                return false;
+            }
+            String distance = null;
+            String instruction = null;
+            String navLine = null;
+            String eta = null;
+            String timeLeft = null;
+            // new format uses progress bar ...
+            if (notification.extras.get("android.progressMax") != null && notification.extras.get("android.subText") != null && !notification.extras.get("android.subText").toString().contains("·")) {
+                LOG.debug("New type");
+                LOG.info(notification.extras.toString());
+
+                if (notification.extras.get("android.progressMax").toString().equals("0") && notification.extras.get("android.progress").toString().equals("0")) return false;
+
+                LOG.info(notification.extras.get("android.progressPoints").toString());
+                LOG.info(notification.extras.get("android.progressSegments").toString());
+                LOG.info(notification.extras.get("android.appInfo").toString());
+
+                distance = String.format("%d m", notification.extras.get("android.progressMax"));
+                instruction = notification.extras.get("android.title").toString();
+                eta = notification.extras.get("android.subText").toString().replace("Arrive ", "");
+
+            } else if (notification.extras.get("android.subText") != null && notification.extras.get("android.subText").toString().contains("·")){
+                distance = (notification.extras.get("android.title") == null) ? "" :
+                        notification.extras.get("android.title").toString(); // eg 100 yd
+                instruction = (notification.extras.get("android.text") == null) ? "" :
+                        notification.extras.get("android.text").toString(); // eg: High St towards Blah
+                navLine = (notification.extras.get("android.subText") == null) ? "" :
+                        notification.extras.get("android.subText").toString().replaceAll("\u00A0", " ");  // eg: 13 min · 4.6 mi · 11:55 ETA
+                String[] navLines = navLine.split("·");
+                for (int i = 0; i < navLines.length; i++) navLines[i] = navLines[i].trim();
+                LOG.info("NAVLINES: " + Arrays.toString(navLines));
+                if (navLines.length < 3) return false; // not in the format we expected - might be 'Shared with you' notification
+                // navLines now has at least 3 elements
+                LOG.info("Navigation: " + instruction + "," + distance + "," + navLines[0] + "," + navLines[1] + "," + navLines[2]);
+                LOG.info(Arrays.toString(navLines));
+                LOG.info(notification.extras.toString());
+                if (navLines[2].contains("ETA"))
+                    eta = navLines[2].replace("ETA","").trim();
+                timeLeft = navLines[0];
+            } else {
+                LOG.info("Dont know what to do");
+                LOG.info(notification.extras.toString());
+                return false;
+            }
+
             int matchedIcon = -1;
+            byte[] px = new byte[128*128];
+
             // getLargeIcon only works in API 23+ - don't try and get icons on older devices
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 Icon icon = notification.getLargeIcon();
@@ -1246,16 +1290,40 @@ public class GoogleMapsNotificationHandler {
                         LOG.info("Icon NEW:\n" + pixelString);
                         knownImages.add(new IconType(255, pixelPack));
                     }
+
+                    /* now do bitmap */
+                    Bitmap bmpMonochrome = Bitmap.createBitmap(128, 128, Bitmap.Config.ALPHA_8);
+                    Canvas cnv = new Canvas(bmpMonochrome);
+                    ColorMatrix ma = new ColorMatrix();
+                    ma.setSaturation(0);
+                    Paint paint = new Paint();
+                    paint.setColorFilter(new ColorMatrixColorFilter(ma));
+                    Drawable draw = icon.loadDrawable(context);
+                    draw.setBounds(0, 0, cnv.getWidth(), cnv.getHeight());
+                    draw.draw(cnv);
+                    int[] pixelsA8 = new int[128*128];
+                    bmpMonochrome.getPixels(pixelsA8, 0, 128, 0, 0, 128, 128);
+                    for (int x = 0; x < px.length; x++) px[x] = (byte)(pixelsA8[x] >> 24);
+/*                    for (int i = 0; i < 128; i++) {
+                        LOG.info(Arrays.toString(Arrays.copyOfRange(px, i*128, ((i+1)*128)-1)));
+                    }*/
                 }
             }
             NavigationInfoSpec navInfo = new NavigationInfoSpec();
-            if (matchedIcon>=0)
+            if (matchedIcon>=0) {
                 navInfo.nextAction = matchedIcon;
+                navInfo.icon = px;
+                LOG.info("NAVDATA");
+                LOG.info("Length: " + px.length);
+                LOG.info("NAVDATA");
+            }
             navInfo.instruction = instruction;
             if (distance != null)
                 navInfo.distanceToTurn = distance;
-            if (navLines[2].contains("ETA"))
-              navInfo.ETA = navLines[2].replace("ETA","").trim();
+            if (eta != null) navInfo.ETA = eta;
+            if (timeLeft != null) navInfo.timeLeft = timeLeft;
+
+
             GBApplication.deviceService().onSetNavigationInfo(navInfo);
 
             return true;
@@ -1297,5 +1365,9 @@ public class GoogleMapsNotificationHandler {
         }
 
         shouldSendNavigation = true;
+    }
+
+    public int[] getIcon(int icontype) {
+        return this.knownImages.get(icontype).icon;
     }
 }

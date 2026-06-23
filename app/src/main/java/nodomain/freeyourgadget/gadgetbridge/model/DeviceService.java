@@ -128,6 +128,8 @@ public interface DeviceService extends EventHandler {
     String EXTRA_NAVIGATION_INSTRUCTION = "navigation_instruction";
     String EXTRA_NAVIGATION_DISTANCE_TO_TURN = "navigation_distance_to_turn";
     String EXTRA_NAVIGATION_NEXT_ACTION = "navigation_next_action";
+    String EXTRA_NAVIGATION_TIME_LEFT = "navigation_time_left";
+    String EXTRA_NAVIGATION_ICON = "navigation_icon";
     String EXTRA_NAVIGATION_ETA = "navigation_eta";
     String EXTRA_APP_UUID = "app_uuid";
     String EXTRA_APP_START = "app_start";

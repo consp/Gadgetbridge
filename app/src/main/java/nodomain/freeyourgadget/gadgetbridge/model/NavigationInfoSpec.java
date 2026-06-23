@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.model;
 
+import android.graphics.drawable.Icon;
+
 public class NavigationInfoSpec {
     public static final int ACTION_CONTINUE = 1;
     public static final int ACTION_TURN_LEFT = 2;
@@ -41,4 +43,7 @@ public class NavigationInfoSpec {
     public String distanceToTurn; ///< Distance to turn (as a string, eg "100m")
     public int nextAction; ///< One of the ACTION_ constants
     public String ETA; ///< Estimated time of Arrival
+    public byte[] icon;
+    public String timeLeft;
+
 }

@@ -371,7 +371,7 @@ public class NotificationListener extends NotificationListenerService {
         final boolean hasPicture = notificationHasPicture(sbn.getNotification());
 
         if (shouldIgnoreNotification(sbn, false, hasPicture)) {
-            if (!"com.sec.android.app.clockpackage".equals(sbn.getPackageName())) {  // workaround to allow phone alarm notification
+            if (!"com.sec.android.app.clockpackage".equals(sbn.getPackageName()) && !"com.google.android.apps.maps".equals(sbn.getPackageName())) {  // workaround to allow phone alarm notification
                 LOG.info("Ignoring notification: {}", sbn.getPackageName());          // need to fix
                 return;
             }

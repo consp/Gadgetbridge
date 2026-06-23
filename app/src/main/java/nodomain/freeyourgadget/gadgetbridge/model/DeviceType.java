@@ -413,6 +413,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.yawell.ring.YawellR10Coordin
 import nodomain.freeyourgadget.gadgetbridge.devices.yawell.ring.YawellR11Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.zetime.ZeTimeCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.gatt_client.BleGattClientCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.bikenav.BikeNavDeviceCoordinator;
 
 /**
  * For every supported device, a device type constant must exist.
@@ -813,7 +814,10 @@ public enum DeviceType {
     COOSPO_HW9(CoospoHW9Coordinator.class),
     COOSPO_HW807(CoospoHW807Coordinator.class),
     GENERIC_WEIGHT_SCALE(GenericWeightScaleCoordinator.class),
+    DIKENAV(BikeNavDeviceCoordinator.class),
     TEST(TestDeviceCoordinator.class);
+
+
 
     private DeviceCoordinator coordinator;
 
